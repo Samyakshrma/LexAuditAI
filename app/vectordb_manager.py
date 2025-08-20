@@ -53,36 +53,39 @@ class VectorDBManager:
             self.client = None
             self.collection = None
 
-    async def load_indian_laws(self):
-        """
-        (Placeholder) Loads the Indian laws data into the ChromaDB collection.
-        The user has this data in vector format, but for demonstration, we will
-        add a few sample documents.
-        """
-        # TODO: The user should replace this function with their actual data ingestion logic.
-        # This is where you would load your vector data and add it to the collection.
-        # Example:
-        # with open('path/to/my_laws.json', 'r') as f:
-        #     laws_data = json.load(f)
-        # self.collection.add(
-        #     documents=[item['text'] for item in laws_data],
-        #     metadatas=[{'source': item['source']} for item in laws_data],
-        #     ids=[item['id'] for item in laws_data]
-        # )
+    import json
 
-        sample_laws = [
-            {"id": "law_1", "text": "The Indian Contract Act, 1872, governs all contractual agreements in India.", "source": "Indian Contract Act"},
-            {"id": "law_2", "text": "The Information Technology Act, 2000, regulates electronic commerce and data privacy.", "source": "Information Technology Act"},
-            {"id": "law_3", "text": "The Companies Act, 2013, governs the incorporation, responsibilities, and winding up of companies.", "source": "Companies Act"},
-            {"id": "law_4", "text": "Privacy Policy: A company must clearly state how user data is collected, used, and protected.", "source": "IT Act, 2000 & Data Protection Rules"}
-        ]
+    async def load_indian_laws(self, filepath: str = "indian_laws.jsonl"):
+        """
+        Loads Indian laws from a JSONL file into ChromaDB.
+        Each JSONL row should have: act_title, section, law
+        """
+        try:
+            documents, metadatas, ids = [], [], []
+            
+            with open(filepath, "r", encoding="utf-8") as f:
+                for line in f:
+                    law = json.loads(line.strip())
+                    
+                    # Build unique ID like "AadhaarAct_Section1"
+                    law_id = f"{law['act_title'].replace(' ', '_')}_section{law['section']}"
+                    
+                    documents.append(law["law"])
+                    metadatas.append({
+                        "act_title": law["act_title"],
+                        "section": law["section"]
+                    })
+                    ids.append(law_id)
 
-        self.collection.add(
-            documents=[law["text"] for law in sample_laws],
-            metadatas=[{"source": law["source"]} for law in sample_laws],
-            ids=[law["id"] for law in sample_laws]
-        )
-        print(f"Added {self.collection.count()} sample documents to the collection.")
+            self.collection.add(
+                documents=documents,
+                metadatas=metadatas,
+                ids=ids
+            )
+            print(f"✅ Added {len(documents)} laws from {filepath} into collection '{self.collection_name}'.")
+
+        except Exception as e:
+            print(f"❌ Error loading laws from {filepath}: {e}")
 
 
     async def query_relevant_laws(self, query: str, n_results: int = 3) -> List[Dict[str, Any]]:
