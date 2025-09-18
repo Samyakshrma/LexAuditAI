@@ -10,9 +10,9 @@ from app.vectordb_manager import VectorDBManager
 # In production, this should always be True.
 ENABLE_LLM_CALLS = True
 # The deployment ID for the LLM that will handle compliance checks
-COMPLIANCE_LLM_DEPLOYMENT_ID = "your-gpt-4o-mini-deployment"
+COMPLIANCE_LLM_DEPLOYMENT_ID = "gpt-4.1"
 # The deployment ID for the LLM that will handle summarization
-SUMMARIZER_LLM_DEPLOYMENT_ID = "your-gpt-35-turbo-deployment"
+SUMMARIZER_LLM_DEPLOYMENT_ID = "gpt-35-turbo"
 
 
 async def run_rag_pipeline(doc_chunks: List[str], llm_helper: LLMUtils, db_manager: VectorDBManager, analysis_id: str) -> List[Dict[str, Any]]:
@@ -57,7 +57,7 @@ async def _process_chunk(chunk: str, llm_helper: LLMUtils, db_manager: VectorDBM
         relevant_laws = await db_manager.query_relevant_laws(query=chunk, n_results=3)
 
         # Step 2: Craft a prompt for the LLM with the retrieved context
-        context_string = "\n".join([f"Source: {law['metadata']['source']}\nText: {law['document']}" for law in relevant_laws])
+        context_string = "\n".join([f"Source: {law['metadata']['act_title']} - Section {law['metadata']['section']}\nText: {law['document']}" for law in relevant_laws])
         
         compliance_system_prompt = (
             "You are LexAudit AI, an expert legal AI for Indian law. "

@@ -1,0 +1,15 @@
+.
+├── app
+│   ├── document_utils.py
+│   ├── __init__.py
+│   ├── llm_utils.py
+│   ├── rag_pipeline.py
+│   └── vectordb_manager.py
+├── file-tree.txt
+├── Law_Dataset
+│   └── indian_laws_dataset.jsonl
+├── LICENSE
+├── main.py
+└── requirements.txt
+
+3 directories, 10 files

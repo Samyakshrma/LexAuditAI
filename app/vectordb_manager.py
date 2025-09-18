@@ -53,9 +53,8 @@ class VectorDBManager:
             self.client = None
             self.collection = None
 
-    import json
 
-    async def load_indian_laws(self, filepath: str = "indian_laws.jsonl"):
+    async def load_indian_laws(self, filepath: str = "../Law_Dataset/indian_laws_dataset.jsonl"):
         """
         Loads Indian laws from a JSONL file into ChromaDB.
         Each JSONL row should have: act_title, section, law
