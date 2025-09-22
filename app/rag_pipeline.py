@@ -4,6 +4,7 @@ from typing import List, Dict, Any
 
 from app.llm_utils import LLMUtils
 from app.vectordb_manager import VectorDBManager
+import json
 
 # A flag to control the LLM calls during development/testing
 # You can set this to False if you want to test the pipeline without incurring LLM costs
@@ -18,18 +19,7 @@ SUMMARIZER_LLM_DEPLOYMENT_ID = "gpt-35-turbo"
 async def run_rag_pipeline(doc_chunks: List[str], llm_helper: LLMUtils, db_manager: VectorDBManager, analysis_id: str) -> List[Dict[str, Any]]:
     """
     Orchestrates the entire RAG pipeline for a given document.
-
-    For each document chunk, it queries the vector database for relevant laws,
-    crafts a prompt with the retrieved context, and calls the LLM for analysis and summary.
-
-    Args:
-        doc_chunks (List[str]): The list of text chunks from the user's document.
-        llm_helper (LLMUtils): An instance of the LLM utility class.
-        db_manager (VectorDBManager): An instance of the vector database manager.
-        analysis_id (str): The unique ID for this analysis run.
-
-    Returns:
-        List[Dict[str, Any]]: A list of analysis results for each document chunk.
+    ... (rest of your original docstring)
     """
     analysis_results = []
     
@@ -74,26 +64,30 @@ async def _process_chunk(chunk: str, llm_helper: LLMUtils, db_manager: VectorDBM
             "Provide a detailed analysis and cite the law provisions that support your conclusion."
         )
 
-        analysis_response = ""
+        analysis_response_string = ""
         if ENABLE_LLM_CALLS:
-            analysis_response = llm_helper.call_llm(
+            analysis_response_string = llm_helper.call_llm(
                 deployment_id=COMPLIANCE_LLM_DEPLOYMENT_ID,
                 system_prompt=compliance_system_prompt,
                 user_message=compliance_user_message,
                 max_tokens=2000
             )
         else:
-            analysis_response = "Placeholder analysis from RAG pipeline."
+            analysis_response_string = '{"status": "processing", "analysis": "Placeholder analysis from RAG pipeline."}'
 
+        # Parse the JSON response
+        analysis_response = llm_helper.parse_llm_json_response(analysis_response_string)
+        
         # Step 3: Call LLM for a plain-language summary (if compliance issues are found)
         summary_response = ""
-        if "non-compliant" in analysis_response.lower() or "risky" in analysis_response.lower():
+        # Check the parsed dictionary for a 'status' or other key to determine compliance
+        if analysis_response.get("status", "").lower() in ["non-compliant", "risky"]:
             if ENABLE_LLM_CALLS:
                 summarizer_system_prompt = "You are a legal summarizer. Simplify the following legal analysis into plain English for a non-lawyer."
                 summary_response = llm_helper.call_llm(
                     deployment_id=SUMMARIZER_LLM_DEPLOYMENT_ID,
                     system_prompt=summarizer_system_prompt,
-                    user_message=analysis_response,
+                    user_message=analysis_response_string, # Pass the raw string to the summarizer
                     max_tokens=500
                 )
             else:

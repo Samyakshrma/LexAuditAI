@@ -41,9 +41,14 @@ class VectorDBManager:
             # Check if the collection is empty and load data if it is.
             if self.collection.count() == 0:
                 print("Collection is empty. Loading Indian laws data...")
-                # In a real-world scenario, you would load your data here.
-                # For this example, we will add a few placeholder documents.
-                await self.load_indian_laws()
+                
+                # --- THIS IS THE CRITICAL FIX ---
+                # Build a robust path that works from any directory
+                current_dir = os.path.dirname(os.path.abspath(__file__))
+                data_path = os.path.join(current_dir, '..', 'Law_Dataset', 'indian_laws_dataset.jsonl')
+                await self.load_indian_laws(data_path)
+                # ----------------------------------
+                
                 print("Indian laws loaded successfully.")
             else:
                 print(f"Collection '{self.collection_name}' already contains {self.collection.count()} documents.")
@@ -53,10 +58,9 @@ class VectorDBManager:
             self.client = None
             self.collection = None
 
-
-    async def load_indian_laws(self, filepath: str = "../Law_Dataset/indian_laws_dataset.jsonl"):
+    async def load_indian_laws(self, filepath: str):
         """
-        Loads Indian laws from a JSONL file into ChromaDB.
+        Loads Indian laws from a JSONL file into ChromaDB, using batching.
         Each JSONL row should have: act_title, section, law
         """
         try:
@@ -66,21 +70,28 @@ class VectorDBManager:
                 for line in f:
                     law = json.loads(line.strip())
                     
-                    # Build unique ID like "AadhaarAct_Section1"
-                    law_id = f"{law['act_title'].replace(' ', '_')}_section{law['section']}"
-                    
-                    documents.append(law["law"])
-                    metadatas.append({
-                        "act_title": law["act_title"],
-                        "section": law["section"]
-                    })
-                    ids.append(law_id)
+                    if law.get("law"):
+                        law_id = f"{law['act_title'].replace(' ', '_')}_section{law['section']}"
+                        
+                        documents.append(law["law"])
+                        metadatas.append({
+                            "act_title": law["act_title"],
+                            "section": law["section"]
+                        })
+                        ids.append(law_id)
+            
+            # --- THIS IS THE CRITICAL FIX ---
+            # Split the data into batches and add to the collection
+            batch_size = 5000  # Set a safe batch size below the max limit
+            for i in range(0, len(documents), batch_size):
+                end_index = i + batch_size
+                self.collection.add(
+                    documents=documents[i:end_index],
+                    metadatas=metadatas[i:end_index],
+                    ids=ids[i:end_index]
+                )
+                print(f"✅ Added batch {i//batch_size + 1} of {len(documents)//batch_size + 1}...")
 
-            self.collection.add(
-                documents=documents,
-                metadatas=metadatas,
-                ids=ids
-            )
             print(f"✅ Added {len(documents)} laws from {filepath} into collection '{self.collection_name}'.")
 
         except Exception as e:

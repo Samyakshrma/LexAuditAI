@@ -1,7 +1,9 @@
 # app/llm_utils.py
 import os
+import json
 from openai import AzureOpenAI
 from dotenv import load_dotenv
+from typing import Dict, Any, Optional
 
 # Load environment variables from .env file
 load_dotenv()
@@ -28,19 +30,10 @@ class LLMUtils:
             print("Please ensure AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY, and AZURE_OPENAI_API_VERSION are set.")
             self.client = None
 
-    def call_llm(self, deployment_id: str, system_prompt: str, user_message: str, temperature: float = 0.7, max_tokens: int = 1000):
+    def call_llm(self, deployment_id: str, system_prompt: str, user_message: str, temperature: float = 0.7, max_tokens: int = 1000) -> Optional[str]:
         """
         Makes a call to the Azure OpenAI Chat Completion API.
-
-        Args:
-            deployment_id (str): The name of the deployment in Azure OpenAI Studio.
-            system_prompt (str): The system prompt to set the context/role of the AI.
-            user_message (str): The user's input/query.
-            temperature (float): Controls randomness. Lower means more deterministic.
-            max_tokens (int): The maximum number of tokens to generate in the completion.
-
-        Returns:
-            str: The generated text response from the LLM, or None if an error occurs.
+        ... (rest of your original docstring)
         """
         if not self.client:
             print("LLM client not initialized. Cannot make API call.")
@@ -60,3 +53,19 @@ class LLMUtils:
         except Exception as e:
             print(f"Error calling Azure LLM ({deployment_id}): {e}")
             return None
+
+    def parse_llm_json_response(self, response_text: str) -> Dict[str, Any]:
+        """
+        Safely parses an LLM string response into a JSON dictionary.
+
+        Args:
+            response_text (str): The string response from the LLM.
+
+        Returns:
+            Dict[str, Any]: The parsed JSON dictionary, or an empty dict if parsing fails.
+        """
+        try:
+            return json.loads(response_text)
+        except json.JSONDecodeError as e:
+            print(f"JSON parsing error: {e}. Malformed JSON received from LLM: {response_text}")
+            return {}
